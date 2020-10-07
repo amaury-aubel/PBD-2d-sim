@@ -1,7 +1,7 @@
 # PBD-2d-sim
 Position-Based Dynamics 2d simulation
 
-This is an implementation of the Position-Based Dynamics (PBD) method for simulating particles with friction (e.g. sand).
+A small personal project I did to play with the Position-Based Dynamics (PBD) method for simulating particles with friction (e.g. sand).
 
 ![Quick demo](https://media.giphy.com/media/UkyPhN6lSwJjNIPhfV/giphy.gif)
 
