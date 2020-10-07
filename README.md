@@ -12,5 +12,5 @@ An excellent introduction to PBD is available in this paper: http://mmacklin.com
 
 While the hybrid Material Point Method (MPM) is gaining popularity for simulating particulate effects such as snow or sand in the Computer Graphics community, PBD remains an amazingly fast simulation tool that offers a simple trade off between precision and speed by controlling the number of constraint iterations.
 
-I have used extensively Houdini's implementation of (X)PBD, a.k.a the [grain solver](https://www.sidefx.com/docs/houdini/grains/about.html) on the movie How to Train your Dragon: the Hidden World. See [some sand examples in my reel](https://vimeo.com/156511737#t=35s).
+I have used extensively [Houdini's implementation of (X)PBD](https://www.sidefx.com/docs/houdini/grains/about.html) on the movie How to Train your Dragon: the Hidden World. See [some sand examples here](https://vimeo.com/156511737#t=35s).
 
