@@ -1,7 +1,11 @@
 # PBD-2d-sim
 Position-Based Dynamics 2d simulation
 
-This is an implementation of the Position-Based Dynamics (PBD) method for simulating particles with friction (e.g. sand). 
+This is an implementation of the Position-Based Dynamics (PBD) method for simulating particles with friction (e.g. sand).
+
+![Quick demo](https://media.giphy.com/media/UkyPhN6lSwJjNIPhfV/giphy.gif)
+
+
 It relies on [Magnum](https://magnum.graphics/), a cross-platform  graphics library, and [Intel's TBB](https://github.com/oneapi-src/oneTBB) for multi-threading. Some of the code is derived from the APIC 2d Fluid simulation from the [Magnum example gallery](https://magnum.graphics/showcase/). 
 
 An excellent introduction to PBD is available in this paper: http://mmacklin.com/EG2015PBD.pdf.
