@@ -64,6 +64,7 @@ void PBDSolver2D::emitParticles(const Vector2& pos, Float size, SDFObject::Objec
                                          _objects->boundary.radii,
                                          _objects->boundary.type };
     
+
     SDFObject emitterMinusBoundary{ emitter, boundary, SDFObject::ObjectType::Intersection };
     generateParticles(emitterMinusBoundary, 10);    
 }
@@ -75,9 +76,8 @@ void PBDSolver2D::generateParticles(const SDFObject& sdfObj, Float initialVeloci
     for (Int i = 0; i < _ni; i++) {
         for (Int j = 0; j < _ni; j++) {
 
-            const Vector2 gridPos{ i + 0.5f, j + 0.5f };
-            const Vector2 cellCenter = gridPos * _cellSize + _origin;
-            const Vector2 ppos = cellCenter;
+            const Vector2 gridPos{ i + 0.5f, j + 0.5f };            
+            const Vector2 ppos = gridPos * _cellSize + _origin;
             if (sdfObj.signedDistance(ppos) < 0) {
                 newParticles.push_back(ppos);
             }
@@ -91,6 +91,7 @@ void PBDSolver2D::generateParticles(const SDFObject& sdfObj, Float initialVeloci
 
 void PBDSolver2D::findNeighbors(const std::vector<Vector2>& pos, std::vector<std::vector<int>> &nbors) const {
 
+    
     KDTree<Vector2, 2> kd;
     kd.build(pos);
 
@@ -118,6 +119,15 @@ void PBDSolver2D::advanceFrame(Float frameDuration, Int nstep) {
     auto start = std::chrono::steady_clock::now();    
     std::vector<std::vector<int>> nbors(_particles.positions.size());
     findNeighbors(_particles.positions, nbors);
+    auto stop = std::chrono::steady_clock::now();
+    using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
+    Float f_ms = FpMilliseconds(stop - start).count();
+    
+    //Debug{} << "Kd-tree took " << f_ms << " ms.\n";
+
+    // make friction independent of number of constraint iterations
+    Float boundaryFriction = Math::pow(1.0f - _boundaryFriction, 1 / static_cast<Float>(_numConstraintIteration));
+    Float friction = Math::pow(1.0f - _friction, 1 / static_cast<Float>(_numConstraintIteration));
 
     // each frame is decomposed into a number of substeps
     start = std::chrono::steady_clock::now();
@@ -136,8 +146,8 @@ void PBDSolver2D::advanceFrame(Float frameDuration, Int nstep) {
         
         // iteratively constrain estimated positions
         for (auto i = 0; i < _numConstraintIteration; i++) {
-            solveBoundaryConstraints(new_p);
-            solveParticleConstraints(new_p, nbors);
+            solveBoundaryConstraints(new_p, boundaryFriction);
+            solveParticleConstraints(new_p, nbors, friction);
         }
 
         // true up velocities based on previous and new position
@@ -147,34 +157,38 @@ void PBDSolver2D::advanceFrame(Float frameDuration, Int nstep) {
         );
         _particles.positions = new_p;
     }
-    auto stop = std::chrono::steady_clock::now();
-    using FpMilliseconds = std::chrono::duration<float, std::chrono::milliseconds::period>;
-    Float f_ms = FpMilliseconds(stop - start).count();
+    stop = std::chrono::steady_clock::now();    
+    f_ms = FpMilliseconds(stop - start).count();
 
-    Debug debug{};
-    //debug << "One Frame took " << f_ms << " ms.\n";
+    //Debug{} << "One Frame took " << f_ms << " ms.\n";
 }
 
 
-void PBDSolver2D::solveParticleConstraints(std::vector<Vector2>& new_p, const std::vector<std::vector<int>>& nbors) const {
-
-    Float dist;
+void PBDSolver2D::solveParticleConstraints(std::vector<Vector2>& new_p, const std::vector<std::vector<int>>& nbors, Float friction) const {
 
     // record collisions with other particles (as indices)
     std::vector<std::vector<int>> collision(new_p.size());
+ 
     
     // loop over each particle and test collision with other particles
+    //
+    // While it is tempting to multithread the following loop, it leads to instability 
+    // as the symmetry of corrective displacements is no longer guaranteed.
+    // As a result, oscillations can occur for neighboring particles
+    //
+    // By looping iteratively without multithreading, we ensure that when two 
+    // particles collide, they are each moved by the same amount in opposite directions.    
     for (unsigned int idx = 0; idx < new_p.size(); idx++) {
 
         // inter particles collisions
         // loop over neighbors
         for (auto nbor = nbors[idx].begin(); nbor != nbors[idx].end(); ++nbor) {
 
-            // use symmetry
+            // use symmetry for speed and stability
             if (*nbor < idx) continue;
-            
+
             Vector2 dir = new_p[idx] - new_p[*nbor];
-            dist = dir.length() - _cellSize;
+            Float dist = dir.length() - _cellSize;
             if (dist < 0) {
                 collision[idx].push_back(*nbor);
                 collision[*nbor].push_back(idx);
@@ -186,9 +200,9 @@ void PBDSolver2D::solveParticleConstraints(std::vector<Vector2>& new_p, const st
         }
     }
 
-    // loop over each particle and test collision with boundary
+    // loop over each particle and add friction in the tangential direction
     TaskScheduler::forEach(new_p.size(), [&](const std::size_t idx) {
-      
+        //int idx = indices[i];
         Vector2& p = new_p[idx];
 
         for (auto col = collision[idx].begin(); col != collision[idx].end(); ++col) {
@@ -196,17 +210,16 @@ void PBDSolver2D::solveParticleConstraints(std::vector<Vector2>& new_p, const st
             Vector2 delta = p - _particles.positions[idx];
             Vector2 normalDelta = dot(delta, N) * N;
             Vector2 tangentialDelta = delta - normalDelta;
-
-            p = _particles.positions[idx] + normalDelta + (1.0f - _friction) * tangentialDelta;
+         
+            p = _particles.positions[idx] + normalDelta + friction * tangentialDelta;
         }
     }
     );
 }
 
-void PBDSolver2D::solveBoundaryConstraints(std::vector<Vector2>& new_p) const {
+void PBDSolver2D::solveBoundaryConstraints(std::vector<Vector2>& new_p, Float friction) const {
 
-    Float dist;
-
+    
     // loop over each particle and test collision with boundary
     TaskScheduler::forEach(new_p.size(), [&](const std::size_t idx) {
         
@@ -214,6 +227,7 @@ void PBDSolver2D::solveBoundaryConstraints(std::vector<Vector2>& new_p) const {
         
             // record collision with boundary
         bool boundaryCollision = false;
+        Float dist;
 
         // collision with the boundary
         if (_objects->boundary.type == SDFObject::ObjectType::Circle) {
@@ -231,12 +245,11 @@ void PBDSolver2D::solveBoundaryConstraints(std::vector<Vector2>& new_p) const {
             Vector2 d{ 0,0 };
 
             // collision with box, solve along each axis independently
-            for (unsigned int axis = 0; axis < 2; axis++) {
-                //dist = Math::abs(p[axis] - _objects->boundary.center[axis]) - _objects->boundary.radii[axis];
+            for (unsigned int axis = 0; axis < 2; axis++) {                
                 dist = Math::abs(rot_p[axis] - _objects->boundary.center[axis]) - _objects->boundary.radii[axis];
                 if (dist < 0) continue;
                 if (rot_p[axis] > _objects->boundary.center[axis]) dist = -dist;
-                //p[axis] += 0.5f * dist;
+                
                 d[axis] += 0.5f * dist;
                 boundaryCollision = true;
             }
@@ -246,14 +259,15 @@ void PBDSolver2D::solveBoundaryConstraints(std::vector<Vector2>& new_p) const {
             p[1] += s * d[0] + c * d[1];
             
         }
+        // add friction in the tangential direction
         if (boundaryCollision) {
 
             Vector2 N = (p - _objects->boundary.center).normalized();
             Vector2 delta = p - _particles.positions[idx];
             Vector2 normalDelta = dot(delta, N) * N;
             Vector2 tangentialDelta = delta - normalDelta;
-
-            p = _particles.positions[idx] + normalDelta + (1.0f - _boundaryFriction) * tangentialDelta;
+            
+            p = _particles.positions[idx] + normalDelta + friction * tangentialDelta;
         }
     });
 }

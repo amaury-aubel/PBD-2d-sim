@@ -80,8 +80,8 @@ public:
 
     // friction
     void multFriction(Float mult) {
-        _friction = Math::clamp(_friction*mult, 1e-4f, 0.5f); 
-        _boundaryFriction = Math::clamp(_boundaryFriction * mult, 1e-4f, 0.5f);
+        _friction = Math::clamp(_friction*mult, 1e-4f, 0.25f); 
+        _boundaryFriction = Math::clamp(_boundaryFriction * mult, 1e-4f, 0.25f);
     }
     Float getFriction() const { return _friction; }
     Float getBoundaryFriction() const { return _boundaryFriction; }
@@ -92,8 +92,8 @@ private:
 
     /* Simulation */
     void findNeighbors(const std::vector<Vector2>& pos, std::vector<std::vector<int>>& nbors) const;
-    void solveBoundaryConstraints(std::vector<Vector2> &new_pos) const;
-    void solveParticleConstraints(std::vector<Vector2> &new_pos, const std::vector<std::vector<int>>& nbors) const;
+    void solveBoundaryConstraints(std::vector<Vector2> &new_pos, Float friction) const;
+    void solveParticleConstraints(std::vector<Vector2> &new_pos, const std::vector<std::vector<int>>& nbors, Float friction) const;
 
     SceneObjects *_objects;
     ParticleData _particles;
@@ -101,8 +101,8 @@ private:
     Float _cellSize;
     Int _ni, _nj;
     Float gravity = 9.81f;
-    Float _boundaryFriction = 0.02f;
-    Float _friction = 0.04f;
+    Float _boundaryFriction = 0.05f;
+    Float _friction = 0.1f;
     Float _orient = 0;
     unsigned int _numConstraintIteration = 2;
 };
