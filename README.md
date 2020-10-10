@@ -3,10 +3,7 @@ Position-Based Dynamics 2d simulation
 
 A small personal project I did to play with the Position-Based Dynamics (PBD) method for simulating particles with friction (e.g. sand).
 
-![Quick demo](https://media.giphy.com/media/UkyPhN6lSwJjNIPhfV/giphy.gif)
-
-Another one with low (inter-particle and with the collider) friction:
-![Another quick demo](https://media.giphy.com/media/WnRcLGYGB2TKOzxWz2/giphy.gif)
+![Quick demo](https://media.giphy.com/media/UkyPhN6lSwJjNIPhfV/giphy.gif)![Another quick demo](https://media.giphy.com/media/WnRcLGYGB2TKOzxWz2/giphy.gif)
 
 It relies on [Magnum](https://magnum.graphics/), a cross-platform  graphics library, and [Intel's TBB](https://github.com/oneapi-src/oneTBB) for multi-threading. Some of the code is derived from the APIC 2d Fluid simulation from the [Magnum example gallery](https://magnum.graphics/showcase/). 
 
