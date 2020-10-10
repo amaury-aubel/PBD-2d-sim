@@ -13,3 +13,6 @@ While the hybrid Material Point Method (MPM) is gaining popularity for simulatin
 
 I have used extensively [Houdini's implementation of (X)PBD](https://www.sidefx.com/docs/houdini/grains/about.html) on the movie How to Train your Dragon: the Hidden World. See [some sand examples here](https://vimeo.com/156511737#t=35s).
 
+Having fun with the washing machine:
+
+![Washer](https://media.giphy.com/media/N9l1VG8Yl08TzS8tuu/giphy.gif)
